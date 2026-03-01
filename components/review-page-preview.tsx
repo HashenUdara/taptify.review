@@ -8,7 +8,13 @@ import {
   PreviewControls,
   PreviewFooter,
 } from "./helpers";
-import { FeedbackStep, RatingStep, RedirectStep, ThankYouStep } from "./steps";
+import {
+  AlreadyReviewedStep,
+  FeedbackStep,
+  RatingStep,
+  RedirectStep,
+  ThankYouStep,
+} from "./steps";
 import useReviewLinkStore from "@/stores/review-link-store";
 import { toast } from "sonner";
 import { Contact, ViewSource } from "@/types";
@@ -24,6 +30,8 @@ export function ReviewPagePreview({
   status,
   identifiedContact,
   mobilePreviewOnly,
+  hasAlreadyReviewed = false,
+  onReviewComplete,
 }: {
   isLoading: boolean;
   title: string;
@@ -32,6 +40,8 @@ export function ReviewPagePreview({
   mobilePreviewOnly?: boolean;
   status?: "draft" | "published";
   identifiedContact: Contact | null;
+  hasAlreadyReviewed?: boolean;
+  onReviewComplete?: (rating?: number) => void;
 }) {
   // Local UI-only state (feedback input, view mode)
   const [viewMode, setViewMode] = useState<"mobile" | "desktop">("mobile");
@@ -53,11 +63,15 @@ export function ReviewPagePreview({
     setTimeout(() => {
       if (rating >= config.minRatingForGoogle) {
         setPreviewStep("redirect");
-        setTimeout(() => setPreviewStep("thankyou"), 1500);
+        setTimeout(() => {
+          setPreviewStep("thankyou");
+          onReviewComplete?.(rating);
+        }, 1500);
       } else if (config.enableFeedbackForLowRating) {
         setPreviewStep("feedback");
       } else {
         setPreviewStep("thankyou");
+        onReviewComplete?.(rating);
       }
     }, 500);
   };
@@ -90,6 +104,7 @@ export function ReviewPagePreview({
       });
       setPreviewStep("thankyou");
       setFeedback("");
+      onReviewComplete?.(rating);
     } catch (err) {
       toast.error(
         err instanceof Error
@@ -189,7 +204,12 @@ export function ReviewPagePreview({
               )}
               style={previewThemeStyles}
             >
-              {previewStep === "rating" && (
+              {hasAlreadyReviewed && page ? (
+                <AlreadyReviewedStep
+                  config={config}
+                  isDarkTheme={isDarkTheme}
+                />
+              ) : previewStep === "rating" ? (
                 <RatingStep
                   title={title}
                   config={config}
@@ -197,9 +217,9 @@ export function ReviewPagePreview({
                   onRatingSelect={handleStarClick}
                   previewRating={previewRating}
                 />
-              )}
+              ) : null}
 
-              {previewStep === "feedback" && (
+              {!hasAlreadyReviewed && previewStep === "feedback" && (
                 <FeedbackStep
                   config={config}
                   isDarkTheme={isDarkTheme}
@@ -212,14 +232,14 @@ export function ReviewPagePreview({
                 />
               )}
 
-              {previewStep === "redirect" && (
+              {!hasAlreadyReviewed && previewStep === "redirect" && (
                 <RedirectStep
                   primaryColor={config.primaryColor}
                   isDarkTheme={isDarkTheme}
                 />
               )}
 
-              {previewStep === "thankyou" && (
+              {!hasAlreadyReviewed && previewStep === "thankyou" && (
                 <ThankYouStep
                   page={page}
                   config={config}

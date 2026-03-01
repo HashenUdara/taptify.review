@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { notFound, useParams, useSearchParams } from "next/navigation";
 import { cancelSmsOnLinkClickAction } from "@/lib/actions";
 import { Contact } from "@/types";
 
@@ -12,15 +12,21 @@ import { Contact } from "@/types";
  */
 export function useCancelSmsOnLinkClick() {
   const searchParams = useSearchParams();
+  const params = useParams();
   const [contact, setContact] = useState<Contact | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const hasProcessed = useRef(false);
 
   useEffect(() => {
     const customerId = searchParams.get("customerId");
+    const slug = params.id;
+
+    if (!slug) {
+      return notFound();
+    }
 
     // Only process if customerId exists and hasn't been processed yet
-    if (!customerId || hasProcessed.current) {
+    if (hasProcessed.current) {
       return;
     }
 
@@ -31,7 +37,10 @@ export function useCancelSmsOnLinkClick() {
     const cancelSmsQueues = async () => {
       setIsLoading(true);
       try {
-        const result = await cancelSmsOnLinkClickAction(customerId);
+        const result = await cancelSmsOnLinkClickAction(
+          customerId,
+          slug as string,
+        );
 
         if (result.success) {
           console.log(
@@ -51,7 +60,7 @@ export function useCancelSmsOnLinkClick() {
     };
 
     cancelSmsQueues();
-  }, [searchParams]);
+  }, [searchParams, params]);
 
   return { contact, isLoading };
 }

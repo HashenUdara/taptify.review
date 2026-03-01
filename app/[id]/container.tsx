@@ -1,7 +1,11 @@
 "use client";
 
 import { ReviewPagePreview } from "@/components/review-page-preview";
-import { useCancelSmsOnLinkClick, useReviewLinkDetail } from "@/hooks";
+import {
+  useCancelSmsOnLinkClick,
+  useReviewLinkDetail,
+  useReviewTracker,
+} from "@/hooks";
 import { useReviewLinkStore } from "@/stores";
 import { mapDbToReviewLinkConfig } from "@/utils/common";
 import { FC, useEffect, useRef } from "react";
@@ -23,6 +27,9 @@ export const ReviewLinkContainer: FC<{
 
   // Cancel SMS queue entries when customer clicks review link
   const { contact } = useCancelSmsOnLinkClick();
+
+  // Track if user has already submitted a review via cookie
+  const { hasAlreadyReviewed, markReviewed } = useReviewTracker(linkId);
 
   const { setConfig } = useReviewLinkStore();
 
@@ -46,6 +53,8 @@ export const ReviewLinkContainer: FC<{
       title={existingLinkData?.businessName ?? ""}
       page={pageView}
       googleReviewUrl={existingLinkData?.positiveRedirectUrl ?? undefined}
+      hasAlreadyReviewed={hasAlreadyReviewed}
+      onReviewComplete={markReviewed}
     />
   );
 };
