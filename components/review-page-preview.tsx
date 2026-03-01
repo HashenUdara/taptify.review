@@ -204,7 +204,7 @@ export function ReviewPagePreview({
               )}
               style={previewThemeStyles}
             >
-              {hasAlreadyReviewed && page ? (
+              {hasAlreadyReviewed && page && previewStep === "rating" ? (
                 <AlreadyReviewedStep
                   config={config}
                   isDarkTheme={isDarkTheme}
@@ -219,7 +219,7 @@ export function ReviewPagePreview({
                 />
               ) : null}
 
-              {!hasAlreadyReviewed && previewStep === "feedback" && (
+              {previewStep === "feedback" && (
                 <FeedbackStep
                   config={config}
                   isDarkTheme={isDarkTheme}
@@ -232,14 +232,14 @@ export function ReviewPagePreview({
                 />
               )}
 
-              {!hasAlreadyReviewed && previewStep === "redirect" && (
+              {previewStep === "redirect" && (
                 <RedirectStep
                   primaryColor={config.primaryColor}
                   isDarkTheme={isDarkTheme}
                 />
               )}
 
-              {!hasAlreadyReviewed && previewStep === "thankyou" && (
+              {previewStep === "thankyou" && (
                 <ThankYouStep
                   page={page}
                   config={config}

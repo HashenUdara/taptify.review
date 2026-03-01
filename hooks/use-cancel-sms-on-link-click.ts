@@ -5,10 +5,18 @@ import { notFound, useParams, useSearchParams } from "next/navigation";
 import { cancelSmsOnLinkClickAction } from "@/lib/actions";
 import { Contact } from "@/types";
 
+const COOKIE_PREFIX = "taptify_reviewed_";
+
+function hasReviewCookie(slug: string): boolean {
+  if (typeof document === "undefined") return false;
+  return document.cookie.includes(`${COOKIE_PREFIX}${slug}=`);
+}
+
 /**
  * Hook to cancel SMS queue entries when a customer clicks a review link
  * Only triggers if customerId search parameter exists
  * Runs once on page load
+ * Skips entirely if the user has already reviewed (cookie check)
  */
 export function useCancelSmsOnLinkClick() {
   const searchParams = useSearchParams();
@@ -19,13 +27,19 @@ export function useCancelSmsOnLinkClick() {
 
   useEffect(() => {
     const customerId = searchParams.get("customerId");
+    const source = searchParams.get("source");
     const slug = params.id;
 
-    if (!slug) {
+    if (!slug || !source) {
       return notFound();
     }
 
-    // Only process if customerId exists and hasn't been processed yet
+    // Skip if already reviewed (direct cookie check — no hydration timing issues)
+    if (hasReviewCookie(slug as string)) {
+      return;
+    }
+
+    // Only process if hasn't been processed yet
     if (hasProcessed.current) {
       return;
     }
@@ -40,6 +54,7 @@ export function useCancelSmsOnLinkClick() {
         const result = await cancelSmsOnLinkClickAction(
           customerId,
           slug as string,
+          source,
         );
 
         if (result.success) {

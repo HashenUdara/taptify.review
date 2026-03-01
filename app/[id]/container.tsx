@@ -25,11 +25,11 @@ export const ReviewLinkContainer: FC<{
     isPublic,
   );
 
-  // Cancel SMS queue entries when customer clicks review link
-  const { contact } = useCancelSmsOnLinkClick();
-
   // Track if user has already submitted a review via cookie
   const { hasAlreadyReviewed, markReviewed } = useReviewTracker(linkId);
+
+  // Cancel SMS queue entries when customer clicks review link (skips if already reviewed)
+  const { contact } = useCancelSmsOnLinkClick();
 
   const { setConfig } = useReviewLinkStore();
 

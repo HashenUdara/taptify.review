@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useSyncExternalStore, useRef } from "react";
 
 const COOKIE_PREFIX = "taptify_reviewed_";
 const COOKIE_MAX_AGE_DAYS = 365;
@@ -27,17 +27,36 @@ function setCookie(name: string, value: string, days: number) {
  * On first visit: no cookie exists → `hasAlreadyReviewed` is false.
  * After completing a review: call `markReviewed()` → sets a cookie.
  * On subsequent visits: cookie is detected → `hasAlreadyReviewed` is true.
+ *
+ * Uses useSyncExternalStore so the server always returns false (no hydration mismatch)
+ * and the client reads the real cookie value after hydration.
  */
 export function useReviewTracker(slug: string | undefined) {
   const cookieName = slug ? `${COOKIE_PREFIX}${slug}` : "";
 
-  // Track when we set the cookie this session (triggers re-render)
-  const [markedThisSession, setMarkedThisSession] = useState(false);
+  // Listeners that get notified when we write a cookie
+  const listeners = useRef(new Set<() => void>());
 
-  // Read cookie synchronously during render — cheap and always up to date.
-  // This correctly handles: SSR (returns false), async slug arrival, and page reloads.
-  const hasAlreadyReviewed =
-    markedThisSession || (cookieName ? !!getCookie(cookieName) : false);
+  const subscribe = useCallback((onStoreChange: () => void) => {
+    listeners.current.add(onStoreChange);
+    return () => {
+      listeners.current.delete(onStoreChange);
+    };
+  }, []);
+
+  const getSnapshot = useCallback(() => {
+    if (!cookieName) return false;
+    return !!getCookie(cookieName);
+  }, [cookieName]);
+
+  // Server always returns false — matches initial client render
+  const getServerSnapshot = useCallback(() => false, []);
+
+  const hasAlreadyReviewed = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
 
   // Call this after the user completes their review
   const markReviewed = useCallback(
@@ -48,7 +67,8 @@ export function useReviewTracker(slug: string | undefined) {
         rating: rating ?? null,
       });
       setCookie(cookieName, value, COOKIE_MAX_AGE_DAYS);
-      setMarkedThisSession(true);
+      // Notify useSyncExternalStore that the cookie changed
+      listeners.current.forEach((fn) => fn());
     },
     [cookieName],
   );

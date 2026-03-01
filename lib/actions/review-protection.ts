@@ -125,12 +125,13 @@ export async function submitPositiveReviewAction(params: {
 export async function cancelSmsOnLinkClickAction(
   contactId: string | undefined | null,
   slug: string | undefined | null,
+  source: string,
 ): Promise<Result<{ cancelled: number; contact: Contact | null }>> {
   return apiRequest<{ cancelled: number; contact: Contact | null }>(
     "/cancel-sms",
     {
       method: "POST",
-      body: { contactId, slug },
+      body: { contactId, slug, source },
     },
   );
 }
