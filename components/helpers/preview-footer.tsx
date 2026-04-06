@@ -20,11 +20,11 @@ export function PreviewFooter({
     >
       <p
         className={cn(
-          "text-xs",
-          isDarkTheme ? "text-white/30" : "text-zinc-500"
+          "text-xs tracking-tight transition-opacity duration-300",
+          isDarkTheme ? "text-white/40" : "text-zinc-500 font-medium"
         )}
       >
-        Powered by <span className="font-medium">Taptify</span>
+        Powered by <span className={cn("font-bold", isDarkTheme ? "text-white/60" : "text-zinc-900")}>Taptify</span>
       </p>
     </div>
   );
