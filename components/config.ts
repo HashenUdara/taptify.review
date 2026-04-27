@@ -48,4 +48,8 @@ export const defaultConfig: ReviewLinkConfig = {
   coverUrl: "",
   notifyEmail: "",
   notifyOnNegative: false,
+
+  // Smart Editor
+  enableSmartReviewEditor: true,
+  smartKeywords: [],
 };

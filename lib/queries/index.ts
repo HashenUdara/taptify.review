@@ -9,4 +9,6 @@ export const reviewLinkKeys = {
   slugCheck: () => [...reviewLinkKeys.all(), "slug-check"] as const,
   slugAvailability: (slug: string, excludeId?: string) =>
     [...reviewLinkKeys.slugCheck(), slug, excludeId] as const,
+  publicReviews: (slug: string) =>
+    [...reviewLinkKeys.public(), "reviews", slug] as const,
 };

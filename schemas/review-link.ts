@@ -3,62 +3,97 @@ import { z } from "zod";
 /**
  * Review Link Validation Schemas
  * Shared schemas for client-side and server-side validation
+ * Standardized lengths and strict email/URL patterns.
  */
 
-// Content Step Schemas
-export const headlineSchema = z
-  .string()
-  .min(1, "Headline is required")
-  .min(5, "Headline must be at least 5 characters")
-  .max(100, "Headline must not exceed 100 characters");
+const REQUIRED_MSG = "This field is required";
+const MAX_25_MSG = "Must not exceed 25 characters";
+const MAX_50_MSG = "Must not exceed 50 characters";
+const MAX_250_MSG = "Must not exceed 250 characters";
 
+// Reusable snippets
+const reqStr = (min = 1, max = 50) =>
+  z
+    .string()
+    .trim()
+    .min(min, min === 1 ? REQUIRED_MSG : `Must be at least ${min} characters`)
+    .max(max, `Must not exceed ${max} characters`);
+
+// Content Step Schemas
+export const headlineSchema = reqStr(2, 50);
 export const subheadlineSchema = z
   .string()
-  .max(200, "Subheadline must not exceed 200 characters")
+  .trim()
+  .max(250, MAX_250_MSG)
   .optional()
   .or(z.literal(""));
 
-export const positiveHeadlineSchema = z
+export const positiveHeadlineSchema = reqStr(5, 50);
+export const positiveSubheadlineSchema = z
   .string()
-  .min(1, "Positive response headline is required")
-  .min(5, "Must be at least 5 characters")
-  .max(100, "Must not exceed 100 characters");
+  .trim()
+  .max(250, MAX_250_MSG)
+  .optional()
+  .or(z.literal(""));
+export const positiveCtaTextSchema = z
+  .string()
+  .trim()
+  .max(25, MAX_25_MSG)
+  .optional()
+  .or(z.literal(""));
 
-export const negativeHeadlineSchema = z
+export const negativeHeadlineSchema = reqStr(5, 50);
+export const negativeSubheadlineSchema = z
   .string()
-  .min(1, "Negative response headline is required")
-  .min(5, "Must be at least 5 characters")
-  .max(100, "Must not exceed 100 characters")
-  .optional();
+  .trim()
+  .max(250, MAX_250_MSG)
+  .optional()
+  .or(z.literal(""));
+export const negativeCtaTextSchema = z
+  .string()
+  .trim()
+  .max(25, MAX_25_MSG)
+  .optional()
+  .or(z.literal(""));
+
+const INVALID_EMAIL_MSG = "Invalid email address";
+const INVALID_URL_MSG = "Invalid URL format (e.g. https://...)";
+const INVALID_COLOR_MSG = "Invalid color format (e.g. #FFFFFF)";
 
 // Responses Step Schemas
 export const minRatingForGoogleSchema = z
-  .number()
+  .number({ message: "Must be a number" })
   .min(1, "Must be at least 1")
   .max(5, "Must not exceed 5");
 
 export const notifyEmailSchema = z
   .string()
-  .email("Invalid email address")
+  .trim()
+  .email(INVALID_EMAIL_MSG)
+  .max(50, MAX_50_MSG)
   .optional()
   .or(z.literal(""));
 
 export const customSlugSchema = z
   .string()
+  .trim()
   .min(1, "Slug is required")
   .min(3, "Slug must be at least 3 characters")
-  .max(50, "Slug must not exceed 50 characters")
+  .max(50, MAX_50_MSG)
   .regex(
     /^[a-z0-9-]+$/,
-    "Slug can only contain lowercase letters, numbers, and hyphens"
+    "Slug can only contain lowercase letters, numbers, and hyphens",
   );
 
 // Appearance Step Schemas
 export const primaryColorSchema = z
   .string()
-  .regex(/^#[0-9A-F]{6}$/i, "Invalid color format");
+  .trim()
+  .regex(/^#[0-9A-F]{6}$/i, INVALID_COLOR_MSG);
 
-export const themeSchema = z.enum(["light", "dark"]);
+export const themeSchema = z.enum(["light", "dark"], {
+  message: "Please select a valid theme",
+});
 
 // Full Config Schema
 export const reviewLinkConfigSchema = z.object({
@@ -72,20 +107,62 @@ export const reviewLinkConfigSchema = z.object({
   showBranding: z.boolean().default(true),
   theme: themeSchema.default("light"),
   primaryColor: primaryColorSchema.default("#4F46E5"),
+
   positiveHeadline: positiveHeadlineSchema,
-  positiveSubheadline: z.string().optional().or(z.literal("")),
-  positiveCtaText: z.string().optional().or(z.literal("")),
-  positiveRedirectUrl: z.string().url().optional().or(z.literal("")),
-  negativeHeadline: negativeHeadlineSchema.optional(),
-  negativeSubheadline: z.string().optional().or(z.literal("")),
-  negativeCtaText: z.string().optional().or(z.literal("")),
-  negativeRedirectUrl: z.string().url().optional().or(z.literal("")),
-  negativeUserFirstName: z.string().max(50).optional().or(z.literal("")),
-  negativeUserLastName: z.string().max(50).optional().or(z.literal("")),
-  negativeUserPhone: z.string().max(50).optional().or(z.literal("")),
-  negativeUserEmail: z.string().email().optional().or(z.literal("")),
+  positiveSubheadline: positiveSubheadlineSchema,
+  positiveCtaText: positiveCtaTextSchema,
+  positiveRedirectUrl: z
+    .string()
+    .trim()
+    .url(INVALID_URL_MSG)
+    .max(500, MAX_250_MSG)
+    .optional()
+    .or(z.literal("")),
+
+  negativeHeadline: negativeHeadlineSchema,
+  negativeSubheadline: negativeSubheadlineSchema,
+  negativeCtaText: negativeCtaTextSchema,
+  negativeRedirectUrl: z
+    .string()
+    .trim()
+    .url(INVALID_URL_MSG)
+    .max(500, MAX_250_MSG)
+    .optional()
+    .or(z.literal("")),
+
+  negativeUserFirstName: z
+    .string()
+    .trim()
+    .max(50, MAX_50_MSG)
+    .optional()
+    .or(z.literal("")),
+  negativeUserLastName: z
+    .string()
+    .trim()
+    .max(50, MAX_50_MSG)
+    .optional()
+    .or(z.literal("")),
+  negativeUserPhone: z
+    .string()
+    .trim()
+    .max(20, "Invalid phone number")
+    .optional()
+    .or(z.literal("")),
+  negativeUserEmail: z
+    .string()
+    .trim()
+    .email(INVALID_EMAIL_MSG)
+    .max(50, MAX_50_MSG)
+    .optional()
+    .or(z.literal("")),
+
   enableFeedbackForLowRating: z.boolean().default(false),
-  feedbackPlaceholder: z.string().optional().or(z.literal("")),
+  feedbackPlaceholder: z
+    .string()
+    .trim()
+    .max(250, MAX_250_MSG)
+    .optional()
+    .or(z.literal("")),
   minRatingForGoogle: minRatingForGoogleSchema.default(4),
   notifyOnNegative: z.boolean().default(false),
   collectContactDetails: z.boolean().default(true),
@@ -93,11 +170,18 @@ export const reviewLinkConfigSchema = z.object({
   customSlug: customSlugSchema,
   status: z.enum(["draft", "published"]).default("draft"),
   isActive: z.boolean().default(false),
-  logoUrl: z.string().optional().or(z.literal("")),
-  coverUrl: z.string().optional().or(z.literal("")),
-  businessName: z.string().optional().or(z.literal("")),
+  logoUrl: z.string().trim().optional().or(z.literal("")),
+  coverUrl: z.string().trim().optional().or(z.literal("")),
+  businessName: z
+    .string()
+    .trim()
+    .max(50, MAX_50_MSG)
+    .optional()
+    .or(z.literal("")),
   createdDate: z.date().optional(),
   publishedAt: z.date().optional(),
+  enableSmartReviewEditor: z.boolean().default(false),
+  smartKeywords: z.array(z.string()).default([]),
 });
 
 export type ReviewLinkConfig = z.infer<typeof reviewLinkConfigSchema>;
@@ -108,46 +192,89 @@ export type ReviewLinkConfig = z.infer<typeof reviewLinkConfigSchema>;
  */
 export function validateField(
   field: keyof ReviewLinkConfig,
-  value: unknown
+  value: unknown,
 ): string | null {
   const schemaMap: Record<keyof ReviewLinkConfig, z.ZodSchema> = {
     headline: headlineSchema,
     subheadline: subheadlineSchema,
     positiveHeadline: positiveHeadlineSchema,
+    positiveSubheadline: positiveSubheadlineSchema,
+    positiveCtaText: positiveCtaTextSchema,
+    positiveRedirectUrl: z
+      .string()
+      .trim()
+      .url(INVALID_URL_MSG)
+      .optional()
+      .or(z.literal("")),
     negativeHeadline: negativeHeadlineSchema,
+    negativeSubheadline: negativeSubheadlineSchema,
+    negativeCtaText: negativeCtaTextSchema,
+    negativeRedirectUrl: z
+      .string()
+      .trim()
+      .url(INVALID_URL_MSG)
+      .optional()
+      .or(z.literal("")),
+    negativeUserFirstName: z
+      .string()
+      .trim()
+      .max(50, MAX_50_MSG)
+      .optional()
+      .or(z.literal("")),
+    negativeUserLastName: z
+      .string()
+      .trim()
+      .max(50, MAX_50_MSG)
+      .optional()
+      .or(z.literal("")),
+    negativeUserPhone: z
+      .string()
+      .trim()
+      .max(20, "Invalid phone number")
+      .optional()
+      .or(z.literal("")),
+    negativeUserEmail: z
+      .string()
+      .trim()
+      .email(INVALID_EMAIL_MSG)
+      .max(50, MAX_50_MSG)
+      .optional()
+      .or(z.literal("")),
     notifyEmail: notifyEmailSchema,
     customSlug: customSlugSchema,
     primaryColor: primaryColorSchema,
     theme: themeSchema,
     minRatingForGoogle: minRatingForGoogleSchema,
-    // Non-validated fields return null
+    feedbackPlaceholder: z
+      .string()
+      .trim()
+      .max(250, MAX_250_MSG)
+      .optional()
+      .or(z.literal("")),
+    businessName: z
+      .string()
+      .trim()
+      .max(50, MAX_50_MSG)
+      .optional()
+      .or(z.literal("")),
+    // Non-validated or simple boolean fields return null (z.any() handles it)
     id: z.any(),
     locationId: z.any(),
     showBusinessName: z.any(),
     showLogo: z.any(),
     showAddress: z.any(),
     showBranding: z.any(),
-    positiveSubheadline: z.any(),
-    positiveCtaText: z.any(),
-    positiveRedirectUrl: z.any(),
-    negativeSubheadline: z.any(),
-    negativeCtaText: z.any(),
-    negativeRedirectUrl: z.any(),
-    negativeUserFirstName: z.any(),
-    negativeUserLastName: z.any(),
-    negativeUserPhone: z.any(),
-    negativeUserEmail: z.any(),
     enableFeedbackForLowRating: z.any(),
-    feedbackPlaceholder: z.any(),
     notifyOnNegative: z.any(),
     collectContactDetails: z.any(),
     logoUrl: z.any(),
     coverUrl: z.any(),
-    businessName: z.any(),
     createdDate: z.any(),
     publishedAt: z.any(),
     status: z.any(),
     isActive: z.any(),
+    enableSmartReviewEditor: z.any(),
+    smartKeywords: z.any(),
   };
 
   const schema = schemaMap[field];
@@ -155,7 +282,6 @@ export function validateField(
 
   const result = schema.safeParse(value);
   if (!result.success) {
-    // Use the first Zod issue message instead of the aggregated stringified message array
     const firstError = result.error.issues?.[0]?.message;
     return firstError || "Invalid value";
   }

@@ -6,6 +6,7 @@ import {
   getLocationReviewLinksAction,
   checkSlugAvailabilityAction,
   getPublicReviewLinkBySlugAction,
+  getPublicReviewsAction,
 } from "@/lib/actions";
 
 /**
@@ -21,6 +22,7 @@ type ReviewLinkDetailResult = Awaited<ReturnType<typeof getReviewLinkAction>>;
 type SlugAvailabilityResult = Awaited<
   ReturnType<typeof checkSlugAvailabilityAction>
 >;
+type PublicReviewsResult = Awaited<ReturnType<typeof getPublicReviewsAction>>;
 
 /**
  * Review link query definitions for TanStack Query
@@ -87,6 +89,21 @@ export const reviewLinkQueries = {
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 15, // 15 minutes
   }),
+
+  //  Fetch recent review comments for AI context (unauthenticated)
+
+  publicReviews: (slug: string, prefetchedResult?: PublicReviewsResult) => ({
+    queryKey: reviewLinkKeys.publicReviews(slug),
+    queryFn: async () => {
+      const result = prefetchedResult ?? (await getPublicReviewsAction(slug));
+      if (!result.success) {
+        throw new Error("Failed to fetch public reviews");
+      }
+      return result.data;
+    },
+    staleTime: 1000 * 60 * 60, // 1 hour (reviews don't change that fast)
+    gcTime: 1000 * 60 * 120, // 2 hours
+  }),
 };
 
 /**
@@ -118,5 +135,15 @@ export async function prefetchReviewLinkDetailQuery(
     await queryClient.prefetchQuery(
       reviewLinkQueries.detail(linkId, isPublic, resDetail),
     );
+  }
+}
+
+export async function prefetchPublicReviewsQuery(
+  queryClient: QueryClient,
+  slug: string,
+) {
+  const res = await getPublicReviewsAction(slug);
+  if (res.success) {
+    await queryClient.prefetchQuery(reviewLinkQueries.publicReviews(slug, res));
   }
 }

@@ -1,1 +1,1 @@
-export { useReviewLinkStore } from "./review-link-store";
+export * from "./review-link-store";

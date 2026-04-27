@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useReviewFeedbackMutation } from "@/hooks";
 import { cn } from "@/lib/utils";
 import {
   BrowserChrome,
@@ -9,18 +10,17 @@ import {
   PreviewFooter,
 } from "./helpers";
 import {
-  AlreadyReviewedStep,
   FeedbackStep,
   RatingStep,
   RedirectStep,
+  SmartEditorStep,
   ThankYouStep,
 } from "./steps";
-import useReviewLinkStore from "@/stores/review-link-store";
 import { toast } from "sonner";
 import { Contact, ViewSource } from "@/types";
 import { useSearchParams } from "next/navigation";
-import { useReviewFeedbackMutation } from "@/hooks";
 import { ReviewPagePreviewSkeleton } from "./review-page-preview-skeleton";
+import { useReviewLinkStore } from "@/stores";
 
 export function ReviewPagePreview({
   isLoading,
@@ -30,8 +30,7 @@ export function ReviewPagePreview({
   status,
   identifiedContact,
   mobilePreviewOnly,
-  hasAlreadyReviewed = false,
-  onReviewComplete,
+  slug,
 }: {
   isLoading: boolean;
   title: string;
@@ -40,8 +39,7 @@ export function ReviewPagePreview({
   mobilePreviewOnly?: boolean;
   status?: "draft" | "published";
   identifiedContact: Contact | null;
-  hasAlreadyReviewed?: boolean;
-  onReviewComplete?: (rating?: number) => void;
+  slug?: string;
 }) {
   // Local UI-only state (feedback input, view mode)
   const [viewMode, setViewMode] = useState<"mobile" | "desktop">("mobile");
@@ -62,16 +60,16 @@ export function ReviewPagePreview({
     setPreviewRating(rating);
     setTimeout(() => {
       if (rating >= config.minRatingForGoogle) {
-        setPreviewStep("redirect");
-        setTimeout(() => {
-          setPreviewStep("thankyou");
-          onReviewComplete?.(rating);
-        }, 1500);
+        if (config.enableSmartReviewEditor) {
+          setPreviewStep("smart-editor");
+        } else {
+          setPreviewStep("redirect");
+          setTimeout(() => setPreviewStep("thankyou"), 1500);
+        }
       } else if (config.enableFeedbackForLowRating) {
         setPreviewStep("feedback");
       } else {
         setPreviewStep("thankyou");
-        onReviewComplete?.(rating);
       }
     }, 500);
   };
@@ -104,7 +102,6 @@ export function ReviewPagePreview({
       });
       setPreviewStep("thankyou");
       setFeedback("");
-      onReviewComplete?.(rating);
     } catch (err) {
       toast.error(
         err instanceof Error
@@ -176,12 +173,12 @@ export function ReviewPagePreview({
       >
         <div
           className={cn(
-            "shadow-2xl shadow-black/40 relative h-[80%] overflow-hidden transition-all duration-300 isolate",
+            "shadow-2xl shadow-black/40 relative min-h-full transition-all duration-300 isolate overflow-hidden mx-auto",
             previewThemeClass,
             !page && !mobilePreviewOnly
               ? viewMode === "mobile"
-                ? "w-93.75 rounded-2xl"
-                : "w-180 rounded-2xl"
+                ? "w-[375px] rounded-2xl"
+                : "w-[720px] rounded-2xl"
               : "w-screen",
             mobilePreviewOnly && "w-full h-full",
           )}
@@ -195,70 +192,84 @@ export function ReviewPagePreview({
           )}
 
           {/* Split Layout - Content Left, Cover Right */}
-          <div className={cn("flex", page ? "h-screen" : "h-125")}>
+          <div className={cn("flex", page ? "min-h-screen" : "min-h-[600px]")}>
             {/* Left Side - Review Content */}
             <div
               className={cn(
-                "flex flex-col flex-1/2 items-center justify-center p-10 transition-colors duration-300",
+                "flex flex-col flex-1 items-center justify-between py-16 px-6 sm:px-10 transition-colors duration-300",
                 config.coverUrl && viewMode === "desktop" ? "w-1/2" : "w-full",
               )}
               style={previewThemeStyles}
             >
-              {hasAlreadyReviewed && page && previewStep === "rating" ? (
-                <AlreadyReviewedStep
-                  config={config}
-                  isDarkTheme={isDarkTheme}
-                />
-              ) : previewStep === "rating" ? (
-                <RatingStep
-                  title={title}
-                  config={config}
-                  isDarkTheme={isDarkTheme}
-                  onRatingSelect={handleStarClick}
-                  previewRating={previewRating}
-                />
-              ) : null}
+              {/* Spacer at top */}
+              {/* Main content section */}
+              <div className="flex-1  flex flex-col items-center justify-center w-full min-h-0">
+                {previewStep === "rating" && (
+                  <RatingStep
+                    title={title}
+                    config={config}
+                    isDarkTheme={isDarkTheme}
+                    onRatingSelect={handleStarClick}
+                    previewRating={previewRating}
+                  />
+                )}
 
-              {previewStep === "feedback" && (
-                <FeedbackStep
-                  config={config}
-                  isDarkTheme={isDarkTheme}
-                  previewRating={previewRating}
-                  feedback={feedback}
-                  onFeedbackChange={setFeedback}
-                  onSubmit={handleFeedbackSubmit}
-                  isSubmitting={submitMutation.isPending}
-                  identifiedContact={identifiedContact}
-                />
-              )}
+                {previewStep === "feedback" && (
+                  <FeedbackStep
+                    config={config}
+                    isDarkTheme={isDarkTheme}
+                    previewRating={previewRating}
+                    feedback={feedback}
+                    onFeedbackChange={setFeedback}
+                    onSubmit={handleFeedbackSubmit}
+                    isSubmitting={submitMutation.isPending}
+                    identifiedContact={identifiedContact}
+                  />
+                )}
 
-              {previewStep === "redirect" && (
-                <RedirectStep
-                  primaryColor={config.primaryColor}
-                  isDarkTheme={isDarkTheme}
-                />
-              )}
+                {previewStep === "redirect" && (
+                  <RedirectStep
+                    primaryColor={config.primaryColor}
+                    isDarkTheme={isDarkTheme}
+                  />
+                )}
 
-              {previewStep === "thankyou" && (
-                <ThankYouStep
-                  page={page}
-                  config={config}
-                  googleReviewUrl={googleReviewUrl}
-                  viewSource={source}
-                  isDarkTheme={isDarkTheme}
-                  previewRating={previewRating}
-                  minRatingForGoogle={config.minRatingForGoogle}
-                  contactId={identifiedContact?.id}
-                  contactPhone={identifiedContact?.telephone ?? undefined}
-                />
-              )}
+                {previewStep === "smart-editor" && (
+                  <SmartEditorStep
+                    config={config}
+                    isDarkTheme={isDarkTheme}
+                    rating={previewRating}
+                    googleReviewUrl={googleReviewUrl}
+                    slug={slug || config.customSlug}
+                    onComplete={() => setPreviewStep("thankyou")}
+                  />
+                )}
+
+                {previewStep === "thankyou" && (
+                  <ThankYouStep
+                    page={page}
+                    config={config}
+                    googleReviewUrl={googleReviewUrl}
+                    viewSource={source}
+                    isDarkTheme={isDarkTheme}
+                    previewRating={previewRating}
+                    minRatingForGoogle={config.minRatingForGoogle}
+                    contactId={identifiedContact?.id}
+                    contactPhone={identifiedContact?.telephone ?? undefined}
+                  />
+                )}
+              </div>
+
+              {/* Branding specifically at the bottom */}
               {config.showBranding && (
-                <PreviewFooter
-                  isDarkTheme={isDarkTheme}
-                  backgroundColor={{
-                    backgroundColor: previewThemeStyles.backgroundColor,
-                  }}
-                />
+                <div className="pt-8">
+                  <PreviewFooter
+                    isDarkTheme={isDarkTheme}
+                    backgroundColor={{
+                      backgroundColor: previewThemeStyles.backgroundColor,
+                    }}
+                  />
+                </div>
               )}
             </div>
 

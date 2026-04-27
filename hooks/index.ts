@@ -4,5 +4,8 @@ export {
   type SubmitPositiveReviewParams,
   useReviewFeedbackMutation,
 } from "./use-review-feedback-mutations";
-export { useReviewLinkDetail } from "./use-review-link-queries";
+export {
+  useReviewLinkDetail,
+  usePublicReviews,
+} from "./use-review-link-queries";
 export { useReviewTracker } from "./use-review-tracker";

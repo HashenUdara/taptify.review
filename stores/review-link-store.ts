@@ -3,7 +3,12 @@ import { validateField } from "@/schemas/review-link";
 import { ReviewLinkConfig } from "@/types/google-business";
 import { defaultConfig } from "@/components/config";
 
-type PreviewStep = "rating" | "feedback" | "redirect" | "thankyou";
+type PreviewStep =
+  | "rating"
+  | "feedback"
+  | "redirect"
+  | "thankyou"
+  | "smart-editor";
 
 type ReviewLinkState = {
   // Config state

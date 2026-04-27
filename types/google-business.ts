@@ -52,4 +52,6 @@ export interface ReviewLinkConfig {
   businessName?: string;
   createdDate?: Date;
   publishedAt?: Date;
+  enableSmartReviewEditor: boolean;
+  smartKeywords: string[];
 }

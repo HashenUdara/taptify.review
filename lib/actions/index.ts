@@ -2,6 +2,19 @@
 
 import { createAction } from "./middleware";
 import * as reviewLink from "./review-protection";
+import * as getPublicReviews from "./get-public-reviews";
+import * as reviewEditor from "./review-editor";
+
+export const transcribeVoiceAction = createAction(
+  reviewEditor.transcribeVoiceAction,
+);
+
+export const getPublicReviewsAction = createAction(
+  getPublicReviews.getPublicReviewsAction,
+  {
+    handleNotFound: true,
+  },
+);
 
 export const getReviewLinkAction = createAction(
   reviewLink.getReviewLinkAction,

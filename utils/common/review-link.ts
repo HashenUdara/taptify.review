@@ -56,6 +56,9 @@ export function mapDbToReviewLinkConfig(
 
     // Optional business name
     businessName: (dbData.businessName as string) || undefined,
+    enableSmartReviewEditor:
+      (dbData.enableSmartReviewEditor as boolean) ?? false,
+    smartKeywords: (dbData.smartKeywords as string[]) || [],
   };
 }
 
